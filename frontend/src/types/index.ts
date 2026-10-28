@@ -27,9 +27,13 @@ export type CustomerData = {
 
 export type OrderResponse = {
   message: string;
+  errors?: Record<string, string>;
   order: {
     id: string;
+    orderNumber: string;
     total: number;
+    currency: 'UAH';
+    status: string;
     createdAt: string;
   };
 };

@@ -8,18 +8,19 @@ async function sendOrderToTelegram(order) {
   }
 
   const lines = order.items
-    .map(item => `• ${item.name} — ${item.quantity} × ${item.price} грн`)
+    .map(item => `• ${item.name} — ${item.quantity} × ${item.price} грн = ${item.lineTotal} грн`)
     .join('\n');
 
   const text = [
-    `🫖 Нове замовлення #${order._id}`,
+    `🫖 Нове замовлення #${order.orderNumber}`,
     '',
     lines,
     '',
-    `Разом: ${order.total} грн`,
+    `Сума: ${order.subtotal} грн`,
+    `Разом: ${order.total} ${order.currency === 'UAH' ? 'грн' : order.currency}`,
     `Імʼя: ${order.customer.name}`,
     `Телефон: ${order.customer.phone}`,
-    `Адреса: ${order.customer.address || 'не вказано'}`,
+    `Адреса: ${order.customer.address}`,
     `Коментар: ${order.customer.comment || 'немає'}`
   ].join('\n');
 

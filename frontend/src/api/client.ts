@@ -1,5 +1,18 @@
 import type { CartItem, CustomerData, OrderResponse, Tea } from '../types';
 
+export class ApiError extends Error {
+  status: number;
+
+  errors: Record<string, string>;
+
+  constructor(message: string, status: number, errors: Record<string, string> = {}) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.errors = errors;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     headers: {
@@ -13,7 +26,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const message = typeof data?.message === 'string' ? data.message : 'Помилка запиту';
-    throw new Error(message);
+    const errors = typeof data?.errors === 'object' && data.errors !== null ? data.errors : {};
+    throw new ApiError(message, response.status, errors);
   }
 
   return data as T;
