@@ -1,4 +1,0 @@
-<%- include('partials/header') %>
-<section class="hero"><div><p class="eyebrow">Чайная коллекция 2026</p><h1>Заварите<br><em>свой момент.</em></h1><p class="lead">Редкие сорта, бережно собранные для неспешных разговоров и тихих вечеров.</p><a class="button" href="/catalog">Смотреть коллекцию</a></div><div class="hero-art">茶</div></section>
-<section class="section"><div class="section-head"><h2>Выбор чайного мастера</h2><a href="/catalog">Весь каталог →</a></div><div class="grid"><% teas.forEach(tea => { %><%- include('partials/card', { tea }) %><% }) %></div></section>
-<%- include('partials/footer') %>
