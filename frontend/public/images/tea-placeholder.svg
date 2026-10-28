@@ -1,0 +1,8 @@
+<svg width="640" height="420" viewBox="0 0 640 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="640" height="420" rx="24" fill="#F5EFE3"/>
+  <circle cx="320" cy="184" r="92" fill="#D8C3A5"/>
+  <path d="M238 239C238 193.712 274.712 157 320 157C365.288 157 402 193.712 402 239V261H238V239Z" fill="#B08768"/>
+  <path d="M422 211H454C475.539 211 493 228.461 493 250C493 271.539 475.539 289 454 289H422V271H454C465.046 271 474 262.046 474 251C474 239.954 465.046 231 454 231H422V211Z" fill="#B08768"/>
+  <rect x="205" y="261" width="230" height="18" rx="9" fill="#8F6B4F"/>
+  <text x="320" y="344" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" fill="#6D4C41">Теплий лист</text>
+</svg>
