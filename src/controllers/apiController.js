@@ -5,11 +5,15 @@ const { sendOrderToTelegram } = require('../services/telegram');
 
 exports.listTeas = async (req, res, next) => {
   try {
-    const filter = req.query.category ? { category: req.query.category } : {};
-    const [teas, categories] = await Promise.all([
-      Tea.find(filter).sort({ createdAt: -1 }).lean(),
-      Tea.distinct('category')
-    ]);
+    const category = typeof req.query.category === 'string' ? req.query.category.trim() : '';
+    const categories = await Tea.distinct('category');
+
+    let teasQuery = Tea.find();
+    if (category) {
+      teasQuery = teasQuery.where('category').equals(category);
+    }
+
+    const teas = await teasQuery.sort({ createdAt: -1 }).lean();
 
     res.json({ teas, categories });
   } catch (error) {

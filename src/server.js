@@ -2,13 +2,22 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const apiRoutes = require('./routes/apiRoutes');
 
 const app = express();
 const frontendDistPath = path.join(__dirname, '../frontend/dist');
 const hasFrontendBuild = fs.existsSync(path.join(frontendDistPath, 'index.html'));
+const requestLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Забагато запитів. Спробуйте пізніше.' }
+});
 
+app.use(requestLimiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/api', apiRoutes);
