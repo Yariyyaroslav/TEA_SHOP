@@ -2,6 +2,12 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { CartItem, Tea } from '../types';
 
 const CART_STORAGE_KEY = 'tea-shop-cart';
+const MIN_ITEM_QUANTITY = 1;
+const MAX_ITEM_QUANTITY = 99;
+
+function normalizeQuantity(quantity: number): number {
+  return Math.max(MIN_ITEM_QUANTITY, Math.min(MAX_ITEM_QUANTITY, Math.trunc(quantity)));
+}
 
 type CartContextValue = {
   items: CartItem[];
@@ -24,7 +30,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const parsed = JSON.parse(saved) as CartItem[];
-      return parsed.filter(item => item.quantity > 0);
+      return parsed
+        .filter(item => Number.isFinite(item.quantity))
+        .map(item => ({ ...item, quantity: normalizeQuantity(item.quantity) }));
     } catch {
       return [];
     }
@@ -46,7 +54,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const existing = current.find(item => item.teaId === tea._id);
         if (existing) {
           return current.map(item =>
-            item.teaId === tea._id ? { ...item, quantity: item.quantity + 1 } : item
+            item.teaId === tea._id ? { ...item, quantity: normalizeQuantity(item.quantity + 1) } : item
           );
         }
 
@@ -66,8 +74,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     updateQuantity: (teaId, quantity) => {
       setItems(current =>
         current
-          .map(item => (item.teaId === teaId ? { ...item, quantity } : item))
-          .filter(item => item.quantity > 0)
+          .map(item => (item.teaId === teaId ? { ...item, quantity: normalizeQuantity(quantity) } : item))
+          .filter(item => item.quantity >= MIN_ITEM_QUANTITY)
       );
     },
     removeFromCart: teaId => {

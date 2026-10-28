@@ -2,6 +2,16 @@ const mongoose = require('mongoose');
 const Tea = require('../models/Tea');
 const Order = require('../models/Order');
 const { sendOrderToTelegram } = require('../services/telegram');
+const {
+  validateCustomer,
+  validateOrderItems,
+  buildOrderItems,
+  calculateTotals
+} = require('../utils/orderValidation');
+
+function buildOrderNumber() {
+  return `TS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+}
 
 exports.listTeas = async (req, res, next) => {
   try {
@@ -37,69 +47,92 @@ exports.getTeaBySlug = async (req, res, next) => {
 exports.createOrder = async (req, res, next) => {
   try {
     const { customer, items } = req.body;
-
-    if (!customer?.name?.trim() || !customer?.phone?.trim()) {
-      return res.status(422).json({ message: 'Вкажіть імʼя та телефон.' });
+    if (!req.body || typeof req.body !== 'object') {
+      return res.status(400).json({
+        message: 'Некоректний JSON у тілі запиту.',
+        errors: { request: 'Передайте тіло запиту у форматі JSON.' }
+      });
     }
 
-    if (!Array.isArray(items) || items.length === 0) {
-      return res.status(422).json({ message: 'Кошик порожній.' });
+    if (!customer || typeof customer !== 'object') {
+      return res.status(400).json({
+        message: 'Блок customer обовʼязковий.',
+        errors: { customer: 'Передайте дані клієнта в полі customer.' }
+      });
     }
 
-    const normalizedItems = items
-      .map(item => ({
-        teaId: item.teaId,
-        quantity: Number(item.quantity)
-      }))
-      .filter(item => mongoose.Types.ObjectId.isValid(item.teaId) && Number.isFinite(item.quantity) && item.quantity > 0);
-
-    if (!normalizedItems.length) {
-      return res.status(422).json({ message: 'Дані товарів некоректні.' });
+    const customerValidation = validateCustomer(customer);
+    const itemsValidation = validateOrderItems(items);
+    const errors = { ...customerValidation.errors, ...itemsValidation.errors };
+    if (Object.keys(errors).length > 0) {
+      return res.status(422).json({
+        message: 'Перевірте дані замовлення.',
+        errors
+      });
     }
 
-    const teas = await Tea.find({ _id: { $in: normalizedItems.map(item => item.teaId) } }).lean();
+    const hasInvalidTeaId = itemsValidation.items.some(item => !mongoose.Types.ObjectId.isValid(item.teaId));
+    if (hasInvalidTeaId) {
+      return res.status(422).json({
+        message: 'Перевірте дані замовлення.',
+        errors: { items: 'Один або декілька товарів мають некоректний ідентифікатор.' }
+      });
+    }
+
+    const quantityByTeaId = itemsValidation.items.reduce((accumulator, item) => {
+      const previousQuantity = accumulator.get(item.teaId) || 0;
+      accumulator.set(item.teaId, previousQuantity + item.quantity);
+      return accumulator;
+    }, new Map());
+
+    const overflowItem = Array.from(quantityByTeaId.values()).find(quantity => quantity > 99);
+    if (overflowItem) {
+      return res.status(422).json({
+        message: 'Перевірте дані замовлення.',
+        errors: { items: 'Кількість одного товару не може перевищувати 99 одиниць.' }
+      });
+    }
+
+    const uniqueTeaIds = Array.from(quantityByTeaId.keys());
+    const teas = await Tea.find({ _id: { $in: uniqueTeaIds } }).lean();
+    if (teas.length !== uniqueTeaIds.length) {
+      return res.status(422).json({
+        message: 'Перевірте дані замовлення.',
+        errors: { items: 'Деякі товари з кошика більше недоступні. Оновіть кошик.' }
+      });
+    }
+
     const teaMap = new Map(teas.map(tea => [String(tea._id), tea]));
-
-    const orderItems = normalizedItems
-      .map(item => {
-        const tea = teaMap.get(String(item.teaId));
-        if (!tea) {
-          return null;
-        }
-
-        return {
-          tea: tea._id,
-          name: tea.name,
-          price: tea.price,
-          quantity: item.quantity
-        };
-      })
-      .filter(Boolean);
-
-    if (!orderItems.length) {
-      return res.status(404).json({ message: 'Товари не знайдені.' });
-    }
-
-    const total = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const normalizedItems = uniqueTeaIds.map(teaId => ({
+      teaId,
+      quantity: quantityByTeaId.get(teaId)
+    }));
+    const orderItems = buildOrderItems(normalizedItems, teaMap);
+    const { subtotal, total } = calculateTotals(orderItems);
 
     const order = await Order.create({
+      orderNumber: buildOrderNumber(),
       items: orderItems,
-      customer: {
-        name: customer.name.trim(),
-        phone: customer.phone.trim(),
-        address: customer.address?.trim(),
-        comment: customer.comment?.trim()
-      },
-      total
+      customer: customerValidation.value,
+      subtotal,
+      total,
+      currency: 'UAH'
     });
 
-    await sendOrderToTelegram(order);
+    try {
+      await sendOrderToTelegram(order);
+    } catch (telegramError) {
+      console.error('Telegram notification failed:', telegramError.message);
+    }
 
     return res.status(201).json({
       message: 'Замовлення успішно створено',
       order: {
         id: String(order._id),
+        orderNumber: order.orderNumber,
         total: order.total,
+        currency: order.currency,
+        status: order.status,
         createdAt: order.createdAt
       }
     });
