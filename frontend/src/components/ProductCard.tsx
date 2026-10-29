@@ -22,7 +22,7 @@ export function ProductCard({ tea }: ProductCardProps) {
         <div className="product-bottom">
           <strong>{formatCurrency(tea.price)}</strong>
           <button type="button" onClick={() => addToCart(tea)}>
-            Додати
+            У кошик
           </button>
         </div>
       </div>

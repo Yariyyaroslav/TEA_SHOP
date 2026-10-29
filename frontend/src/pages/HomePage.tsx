@@ -39,7 +39,10 @@ export function HomePage() {
       </section>
 
       <section className="section-gap">
-        <h2>Категорії</h2>
+        <div className="section-heading">
+          <h2>Найди свій настрій</h2>
+          <span className="category">Добірка для тебе</span>
+        </div>
         <div className="category-list">
           {categories.map(category => (
             <Link key={category} className="category-pill" to={`/catalog?category=${encodeURIComponent(category)}`}>
@@ -50,7 +53,10 @@ export function HomePage() {
       </section>
 
       <section className="section-gap">
-        <h2>Популярні позиції</h2>
+        <div className="section-heading">
+          <h2>Улюбленці гостей</h2>
+          <Link to="/catalog" className="category-pill">Дивитись усі →</Link>
+        </div>
         {loading ? <p className="state">Завантаження товарів…</p> : null}
         {error ? <p className="state error">{error}</p> : null}
         {!loading && !error && !featured.length ? <p className="state">Поки що немає товарів.</p> : null}
