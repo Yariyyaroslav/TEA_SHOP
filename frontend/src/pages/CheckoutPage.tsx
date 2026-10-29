@@ -63,6 +63,20 @@ export function CheckoutPage() {
           {loading ? 'Відправлення…' : 'Підтвердити замовлення'}
         </button>
       </form>
+
+      <aside className="order-summary">
+        <h2>Ваше замовлення</h2>
+        {items.map(item => (
+          <div className="summary-item" key={item.teaId}>
+            <span>{item.name} × {item.quantity}</span>
+            <strong>{formatCurrency(item.price * item.quantity)}</strong>
+          </div>
+        ))}
+        <div className="summary-total">
+          <span>Разом</span>
+          <span>{formatCurrency(totalPrice)}</span>
+        </div>
+      </aside>
     </section>
   );
 }
